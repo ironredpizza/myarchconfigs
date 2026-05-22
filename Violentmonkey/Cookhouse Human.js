@@ -6,7 +6,7 @@
 // @grant        GM_xmlhttpRequest
 // @connect      docs.google.com
 // @connect      googleusercontent.com
-// @version      6.29
+// @version      6.31
 // ==/UserScript==
 
 (function() {
@@ -42,6 +42,16 @@
         await humanDelay(80);
     };
 
+    const setReactValue = (input, value) => {
+        if (!input) return;
+        const nativeSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype, 'value'
+        ).set;
+        nativeSetter.call(input, String(value));
+        input.dispatchEvent(new Event('input',  { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
     const humanType = async (input, value) => {
         if (!input) return;
         input.focus();
@@ -68,6 +78,7 @@
         if (cancelled) throw new Error('CANCELLED');
     };
 
+    // ── Button container ──────────────────────────────────────────────────────
     const buttonContainer = document.createElement('div');
     buttonContainer.style.cssText = `
         position: fixed;
@@ -165,42 +176,7 @@
         });
     };
 
-    const setReactInput = (input, value) => {
-        if (!input) return;
-        const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-        nativeSetter.call(input, value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-    };
-
-    function computePeakLunchStrength() {
-        const allInputs = [...document.querySelectorAll('input[id*="indentQty"]')]
-            .filter(i => i.id.includes('_L_'));
-        const byDate = {};
-        for (const inp of allInputs) {
-            const dateMatch = inp.id.match(/(\d{2}\/\d{2}\/\d{4})/);
-            if (!dateMatch) continue;
-            const date = dateMatch[1];
-            if (!byDate[date]) byDate[date] = 0;
-            const isMuslim = inp.id.includes('_MUSLIM_O') && !inp.id.includes('SPECIAL');
-            const isVeg    = inp.id.includes('_VEGETARIAN');
-            const isSD     = inp.id.includes('_SPECIAL DIET MUSLIM');
-            if (isMuslim || isVeg || isSD) {
-                const val = parseInt(inp.value, 10) || 0;
-                byDate[date] += val;
-            }
-        }
-        const dates = Object.keys(byDate);
-        if (dates.length === 0) return null;
-        let peakDate = dates[0], peakVal = byDate[dates[0]];
-        for (const d of dates) {
-            if (byDate[d] > peakVal) { peakVal = byDate[d]; peakDate = d; }
-        }
-        console.log('Peak lunch strength:', peakVal, 'on', peakDate, '| all dates:', byDate);
-        return peakVal > 0 ? String(peakVal) : null;
-    }
-
-    const setStrengthHuman = async (value = '39') => {
+    const setStrengthHuman = async (value = '41') => {
         const input = document.querySelector('input[id*="postedStrength"]');
         if (input) await humanType(input, value);
         await humanDelay(50);
@@ -284,7 +260,7 @@
 
         const qtyInputs = [...document.querySelectorAll('input[id*="NON_MUSLIM"]')];
         const filteredQty = mealCode ? qtyInputs.filter(i => i.id.includes(`_${mealCode}_`)) : qtyInputs;
-        filteredQty.forEach(i => setReactInput(i, '1'));
+        filteredQty.forEach(i => setReactValue(i, '1'));
         await dismissPicker();
     };
 
@@ -324,10 +300,9 @@
         console.log('All meals done!');
     };
 
-    // ── Sheet auto-detection (FAST: parallel fetch, single index pass) ────────
+    // ── Sheet helpers ─────────────────────────────────────────────────────────
     const SHEET_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJAT7i_LJ3R5asuBQ6bHslckUnzGqLUs-Zyxxh03GOIQcRhw02b0SXjZS_XbXBl_Pl7zNzSxqS9yWd/pub';
 
-    // header (normalised) → { gid, rows }  — built once per sync run
     const sheetIndex = {};
 
     function gmFetch(url) {
@@ -341,7 +316,6 @@
         });
     }
 
-    // ── Header normalisation ──────────────────────────────────────────────────
     function normaliseHeader(str) {
         return str
             .replace(/[\u00A0\u200B\uFEFF\u200C\u200D]/g, ' ')
@@ -350,18 +324,15 @@
             .toLowerCase();
     }
 
-    // ── Extract every unique gid from the published HTML ─────────────────────
     function extractGidsFromHtml(html) {
-        const seen = new Set(['0']); // gid=0 always exists
-        for (const m of html.matchAll(/gid=(\d+)/g))           seen.add(m[1]);
+        const seen = new Set(['0']);
+        for (const m of html.matchAll(/gid=(\d+)/g))             seen.add(m[1]);
         for (const m of html.matchAll(/"sheetId"\s*:\s*(\d+)/g)) seen.add(m[1]);
         return [...seen];
     }
 
-    // ── Build full index: fetch ALL tabs in parallel, one pass ───────────────
     async function buildSheetIndex() {
         showToast('⏳ Loading sheets…');
-        // Clear stale index
         for (const k of Object.keys(sheetIndex)) delete sheetIndex[k];
 
         const html = await gmFetch(`${SHEET_BASE}?output=html`);
@@ -386,7 +357,6 @@
         console.log(`Index ready — ${Object.keys(sheetIndex).length} keys from ${results.length} tab(s).`);
     }
 
-    // ── Date header helpers ───────────────────────────────────────────────────
     function formDateToSheetHeader(ddmmyyyy, longMonth = false) {
         const [dd, mm] = ddmmyyyy.split('/');
         const short = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -411,7 +381,6 @@
         ];
     }
 
-    // Pure lookup — no network, index already built
     function resolveDate(formDate) {
         for (const header of candidateHeaders(formDate)) {
             const entry = sheetIndex[normaliseHeader(header)];
@@ -420,7 +389,6 @@
         return { gid: null, rows: null, sheetHeader: candidateHeaders(formDate)[0] };
     }
 
-    // ── CSV helpers ───────────────────────────────────────────────────────────
     function showToast(msg, isError = false) {
         const existing = document.getElementById('__eco_toast__');
         if (existing) existing.remove();
@@ -463,12 +431,21 @@
         return [...dateSet].sort();
     }
 
+    async function waitForFormDates(timeoutMs = 15000) {
+        const start = Date.now();
+        while (Date.now() - start < timeoutMs) {
+            const dates = getDatesFromForm();
+            if (dates.length > 0) return dates;
+            await sleep(200);
+        }
+        return [];
+    }
+
     function findColIndex(headerRow, sheetHeader) {
         const key = normaliseHeader(sheetHeader);
         for (let i = 0; i < headerRow.length; i++) {
             if (normaliseHeader(headerRow[i]) === key) return i;
         }
-        // Partial match fallback: header cell starts with the key
         for (let i = 0; i < headerRow.length; i++) {
             if (normaliseHeader(headerRow[i]).startsWith(key)) return i;
         }
@@ -481,10 +458,40 @@
             const label = normaliseHeader(row[1] ?? '');
             const val = row[colIndex]?.trim().replace(/,/g, '') || '';
             if (label === 'total muslim' && result.minus === null) result.minus = val;
-            if (label === 'total veg' && result.totalVeg === null) result.totalVeg = val;
-            if (label === 'total sd'  && result.totalSD  === null) result.totalSD  = val;
+            if (label === 'total veg'    && result.totalVeg === null) result.totalVeg = val;
+            if (label === 'total sd'     && result.totalSD  === null) result.totalSD  = val;
         }
         return result;
+    }
+
+    async function computePeakLunchStrengthFromSheet() {
+        if (Object.keys(sheetIndex).length === 0) {
+            await buildSheetIndex();
+        }
+
+        const formDates = getDatesFromForm();
+        if (formDates.length === 0) return null;
+
+        let peak = 0;
+
+        for (const formDate of formDates) {
+            const { gid, rows, sheetHeader } = resolveDate(formDate);
+            if (!gid) continue;
+
+            const headerRow = rows[0];
+            const colIndex = findColIndex(headerRow, sheetHeader);
+            if (colIndex === -1) continue;
+
+            const { minus, totalVeg, totalSD } = extractSheetValues(rows, colIndex);
+            const dayTotal = (parseInt(minus, 10) || 0)
+                           + (parseInt(totalVeg, 10) || 0)
+                           + (parseInt(totalSD, 10) || 0);
+
+            console.log(`Lunch strength ${sheetHeader}: M=${minus} V=${totalVeg} SD=${totalSD} → ${dayTotal}`);
+            if (dayTotal > peak) peak = dayTotal;
+        }
+
+        return peak > 0 ? String(peak) : null;
     }
 
     const fillForMeal = async (value, formDate, mealCode, typePatterns = ['_MUSLIM_O']) => {
@@ -497,11 +504,9 @@
                 for (const inp of inputs) {
                     checkCancelled();
                     inp.scrollIntoView({ block: 'center' });
-                    await humanDelay(100);
-                    humanMouseMove(inp);
-                    await humanDelay(60);
-                    await humanType(inp, value);
                     await humanDelay(80);
+                    setReactValue(inp, value);
+                    await humanDelay(60);
                     filled++;
                 }
                 console.log(`Filled ${mealCode} with pattern ${pattern}: ${value} (${filled} inputs)`);
@@ -521,7 +526,6 @@
             return;
         }
 
-        // One parallel fetch upfront — all tabs loaded simultaneously
         await buildSheetIndex();
         checkCancelled();
 
@@ -566,17 +570,17 @@
             const ns1Val       = getVal('reduced nightsnack 1');
             const ns2Val       = getVal('reduced nightsnack 2');
 
-            const breakfastFilled = await fillForMeal(breakfastVal, formDate, 'EB', ['_MUSLIM_O']);
-            const dinnerFilled    = await fillForMeal(dinnerVal,    formDate, 'D',  ['_MUSLIM_O']);
+            const breakfastFilled = await fillForMeal(breakfastVal, formDate, 'EB',  ['_MUSLIM_O']);
+            const dinnerFilled    = await fillForMeal(dinnerVal,    formDate, 'D',   ['_MUSLIM_O']);
             const ns1Filled       = await fillForMeal(ns1Val,       formDate, 'NS3', ['_MUSLIM_O', '_MUSLIM']);
             const ns2Filled       = await fillForMeal(ns2Val,       formDate, 'NS4', ['_MUSLIM_O', '_MUSLIM']);
 
             results.push(`${sheetHeader}:
-  Lunch  → M=${minus}(${lunchMuslim}) V=${totalVeg}(${lunchVeg}) SD=${totalSD}(${lunchSD})
+  Lunch     → M=${minus}(${lunchMuslim}) V=${totalVeg}(${lunchVeg}) SD=${totalSD}(${lunchSD})
   Breakfast → M=${breakfastVal}(${breakfastFilled})
-  Dinner   → M=${dinnerVal}(${dinnerFilled})
-  NS1      → M=${ns1Val}(${ns1Filled})
-  NS2      → M=${ns2Val}(${ns2Filled})`);
+  Dinner    → M=${dinnerVal}(${dinnerFilled})
+  NS1       → M=${ns1Val}(${ns1Filled})
+  NS2       → M=${ns2Val}(${ns2Filled})`);
 
             anyFilled = true;
         }
@@ -590,46 +594,82 @@
 
     // ── Buttons ───────────────────────────────────────────────────────────────
     createBtn('1. Camp & Date', '#CC1E2C', '#FFFFFF', async () => {
-        const menuItems = [...document.querySelectorAll('li.ant-menu-item')];
-        const weeklyIndent = menuItems.find(el => el.getAttribute('data-menu-id')?.includes('weeklyMealIndent'));
-        if (weeklyIndent) {
-            await humanClick(weeklyIndent);
-            await humanDelay(400);
+        const menuSpans = [...document.querySelectorAll('li.ant-menu-item span')];
+        const targetSpan = menuSpans.find(el => el.textContent.trim() === 'Manage Weekly Meal Indents/Forecast');
+        if (targetSpan) {
+            const menuItem = targetSpan.closest('li.ant-menu-item');
+            if (menuItem) {
+                humanMouseMove(menuItem);
+                await humanDelay(180 + Math.random() * 120);
+                await humanClick(menuItem);
+                await humanDelay(600 + Math.random() * 300);
+            }
         }
-        await humanDelay(120);
+
+        await humanDelay(200 + Math.random() * 100);
         await selectAntDropdown('#formName_cookhouseCd', 'KHATIB CAMP (BLK 6)');
-        await humanDelay(200);
+        await humanDelay(400 + Math.random() * 200);
+
         const dateInput = document.querySelector('#formName_startDate');
-        humanMouseMove(dateInput);
-        await humanDelay(80);
-        await humanClick(dateInput);
+        if (dateInput) {
+            humanMouseMove(dateInput);
+            await humanDelay(150 + Math.random() * 100);
+            await humanClick(dateInput);
+            await humanDelay(200 + Math.random() * 100);
+        }
     });
 
     createBtn('2. Auto Fill', '#475569', '#F8FAFC', async () => {
+        const formArea = document.querySelector('form, .ant-form');
+        if (formArea) {
+            humanMouseMove(formArea);
+            await humanDelay(300 + Math.random() * 200);
+        }
+
         const searchBtn = [...document.querySelectorAll('button.ant-btn-primary')]
             .find(b => b.innerText.trim() === 'Search' || b.textContent.trim() === 'Search');
         if (searchBtn) {
+            humanMouseMove(searchBtn);
+            await humanDelay(200 + Math.random() * 150);
             await humanClick(searchBtn);
-            await humanDelay(600);
+            await humanDelay(1200 + Math.random() * 600);
         }
-        await humanDelay(250);
+
+        await humanDelay(400 + Math.random() * 200);
         await selectAntDropdown('#formName_unitCd', 'S32B');
-        await humanDelay(180);
+        await humanDelay(700 + Math.random() * 300);
+
         await selectAntDropdown('#formName_viewType', 'By Meal Type');
-        await humanDelay(200);
-        const peakStrength = computePeakLunchStrength() ?? '39';
+        await humanDelay(800 + Math.random() * 400);
+
+        // Wait for table to fully render before fetching strength
+        showToast('⏳ Waiting for table to load…');
+        await waitForFormDates(15000);
+        await humanDelay(400 + Math.random() * 200);
+
+        showToast('⏳ Fetching peak strength from sheet…');
+        const peakStrength = (await computePeakLunchStrengthFromSheet()) ?? '41';
         console.log('Using posted strength:', peakStrength);
+
+        const strengthInput = document.querySelector('input[id*="postedStrength"]');
+        if (strengthInput) {
+            strengthInput.scrollIntoView({ block: 'center' });
+            await humanDelay(300 + Math.random() * 150);
+            humanMouseMove(strengthInput);
+            await humanDelay(200 + Math.random() * 100);
+        }
         await setStrengthHuman(peakStrength);
-        await humanDelay(150);
+        await humanDelay(400 + Math.random() * 200);
+
         const specialLabel = Array.from(document.querySelectorAll('label.ant-checkbox-wrapper'))
             .find(label => label.textContent.includes('special diet'));
         if (specialLabel) {
             const checkbox = specialLabel.querySelector('.ant-checkbox');
             if (checkbox && !checkbox.classList.contains('ant-checkbox-checked')) {
                 humanMouseMove(checkbox);
-                await humanDelay(70);
+                await humanDelay(200 + Math.random() * 150);
                 await humanClick(checkbox);
-                await humanDelay(100);
+                await humanDelay(300 + Math.random() * 150);
             }
         }
     });
