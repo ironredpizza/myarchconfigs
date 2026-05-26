@@ -1,0 +1,8 @@
+#!/bin/sh
+exec tail -n +3 $0
+menuentry "Arch Linux" --class arch {
+	insmod linux
+	insmod fat
+	linux /vmlinuz-linux root=/dev/nvme0n1p2 rootflags=subvol=@ rw quiet
+	initrd /amd-ucode.img /initramfs-linux.img
+}
