@@ -1,14 +1,12 @@
 /* ----------- 💫 https://github.com/LinuxBeginnings 💫 -------- */
 /* wallust-wlogout */
 @import '../../.config/waybar/wallust/colors-waybar.css';
-
 window {
     font-size: 16pt;
     font-family: 'Fira Code Medium', monospace;
     color: #c8d0d8;
     background-color: rgba(10, 12, 18, 0.75);
 }
-
 button {
     background-repeat: no-repeat;
     background-position: center;
@@ -23,7 +21,6 @@ button {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     color: #7a8a9a;
 }
-
 button:focus {
     background-color: rgba(20, 25, 35, 0.6);
     background-size: 22%;
@@ -33,60 +30,63 @@ button:focus {
     color: #7a8a9a;
     margin: 100px 6px;
 }
-
 button:hover {
     background-color: rgba(40, 60, 90, 0.85);
     background-size: 32%;
     border-radius: 12px;
     border: 1px solid rgba(160, 190, 230, 0.3);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7),
-                0 0 24px rgba(100, 140, 200, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 24px rgba(100, 140, 200, 0.15);
     outline-style: none;
     transition: all 0.3s cubic-bezier(.55, 0.0, .28, 1.682);
     color: #e8f0ff;
 }
-
 button:hover#shutdown {
     margin: 70px 6px;
 }
-
 button:hover#reboot {
     margin: 70px 6px;
 }
-
 button:hover#logout {
     margin: 70px 6px;
 }
-
 button:hover#hibernate {
     margin: 70px 6px;
 }
-
 button:hover#lock {
     margin: 70px 6px;
 }
-
 #shutdown {
     background-image: image(url("./icons/power.png"));
     margin: 100px 6px;
 }
-
+#shutdown:hover {
+    background-image: image(url("./icons/power-hover.png"));
+}
 #reboot {
     background-image: image(url("./icons/restart.png"));
     margin: 100px 6px;
 }
-
+#reboot:hover {
+    background-image: image(url("./icons/restart-hover.png"));
+}
 #logout {
     background-image: image(url("./icons/logout.png"));
     margin: 100px 6px;
 }
-
+#logout:hover {
+    background-image: image(url("./icons/logout-hover.png"));
+}
 #hibernate {
     background-image: image(url("./icons/hibernate.png"));
     margin: 100px 6px;
 }
-
+#hibernate:hover {
+    background-image: image(url("./icons/hibernate-hover.png"));
+}
 #lock {
     background-image: image(url("./icons/lock.png"));
     margin: 100px 6px;
+}
+#lock:hover {
+    background-image: image(url("./icons/lock-hover.png"));
 }
