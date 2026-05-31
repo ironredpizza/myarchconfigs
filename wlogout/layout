@@ -18,13 +18,13 @@
 }
 {
     "label" : "hibernate",
-    "action" : "swaylock -f && systemctl hibernate",
+    "action" : "bash ~/.config/hypr/scripts/hyprlock-launch.sh && systemctl hibernate",
     "text" : "Hibernate",
     "keybind" : "h"
 }
 {
     "label" : "lock",
-    "action" : "hyprlock",
+    "action" : "pkill wlogout & sleep 0.2 && bash ~/.config/hypr/scripts/hyprlock-launch.sh",
     "text" : "Lock",
     "keybind" : "l"
 }
