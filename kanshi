@@ -1,14 +1,13 @@
 profile Home {
     output "eDP-1" mode 1920x1080 position 232,1624 scale 1.0
-    output "Dell Inc. DELL P3225QE 8H1JLF4" mode 3840x2160@100 position 0,0 scale 1.33
+    output "Dell Inc. DELL P3225QE 8H1JLF4" mode 3840x2160@100 position 0,0 scale 1.333333
 }
-
 profile Home_Full {
     output "eDP-1" mode 1920x1080 position 258,2160 scale 1.0
     output "Dell Inc. DELL P3225QE 8H1JLF4" mode 3840x2160@100 position 0,0 scale 1.0
 }
-
 profile Camp {
     output "eDP-1" mode 1920x1080 position 0,1080 scale 1.0
     output "HP Inc. HP P22 G5 3CM3030CJV" mode 1920x1080@74.97 position 0,0 scale 1.0
+
 }
