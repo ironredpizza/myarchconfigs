@@ -14,8 +14,12 @@ button {
     background-position: center;
     background-size: 22%;
     background-color: rgba(20, 25, 35, 0.6);
-    animation: gradient_f 10s ease-in infinite;
-    transition: all 0.3s cubic-bezier(.55, 0.0, .28, 1.682);
+    transition: background-color 0.25s cubic-bezier(.55, 0.0, .28, 1.682),
+                background-size 0.25s cubic-bezier(.55, 0.0, .28, 1.682),
+                border-color 0.25s cubic-bezier(.55, 0.0, .28, 1.682),
+                box-shadow 0.25s cubic-bezier(.55, 0.0, .28, 1.682),
+                color 0.25s cubic-bezier(.55, 0.0, .28, 1.682),
+                margin 0.25s cubic-bezier(.55, 0.0, .28, 1.682);
     border-radius: 12px;
     border: 1px solid rgba(180, 200, 220, 0.08);
     outline-style: none;
@@ -42,26 +46,21 @@ button:hover {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7),
                 0 0 24px rgba(100, 140, 200, 0.15);
     outline-style: none;
-    transition: all 0.3s cubic-bezier(.55, 0.0, .28, 1.682);
     color: #e8f0ff;
 }
 
 button:hover#shutdown {
     margin: 70px 6px;
 }
-
 button:hover#reboot {
     margin: 70px 6px;
 }
-
 button:hover#logout {
     margin: 70px 6px;
 }
-
 button:hover#hibernate {
     margin: 70px 6px;
 }
-
 button:hover#lock {
     margin: 70px 6px;
 }
@@ -70,22 +69,18 @@ button:hover#lock {
     background-image: image(url("./icons/power.png"));
     margin: 100px 6px;
 }
-
 #reboot {
     background-image: image(url("./icons/restart.png"));
     margin: 100px 6px;
 }
-
 #logout {
     background-image: image(url("./icons/logout.png"));
     margin: 100px 6px;
 }
-
 #hibernate {
     background-image: image(url("./icons/hibernate.png"));
     margin: 100px 6px;
 }
-
 #lock {
     background-image: image(url("./icons/lock.png"));
     margin: 100px 6px;
