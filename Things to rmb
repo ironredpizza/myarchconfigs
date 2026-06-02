@@ -1,0 +1,8 @@
+# Monitor Issue:
+systemctl suspend
+then power on
+
+# Pause auto monitor config on saved monitors:
+pkill kanshi
+# Reapply kanshi 
+kanshi &
